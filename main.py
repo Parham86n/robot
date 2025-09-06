@@ -1,4 +1,4 @@
-# main.py - نسخه نهایی با اصلاحیه برای پکیج سه پایه
+# main.py - نسخه نهایی با متن‌های شما و اصلاحیه فنی برای پکیج سه پایه
 
 # --- فاز ۱: وارد کردن تمام کتابخانه‌های لازم ---
 import logging
@@ -50,7 +50,7 @@ BTN_GRADE_12 = "پایه دوازدهم"
 BTN_BUNDLE = "🎁 پکیج کامل (هر سه پایه)"
 BTN_BACK = "🔙 بازگشت"
 
-# --- متن‌های حرفه‌ای و باکلاس ---
+# --- متن‌های حرفه‌ای و باکلاس (متن‌های شما) ---
 MSG_WELCOME = "✨ به مدیکال مود خوش آمدید!\n\nدر اینجا، یادگیری برات آسون تر میشه. آماده‌اید تا شروع کنیم؟\n\nلطفا برای شروع، یکی از گزینه‌ها را انتخاب کنید."
 
 MSG_SELECT_COURSE = f"""
@@ -192,8 +192,8 @@ async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text("✅ رسید شما دریافت شد. تیم ما در اسرع وقت آن را بررسی خواهد کرد. از صبوری شما سپاسگزاریم.")
     
     keyboard = [[
-        InlineKeyboardButton("✅ تایید پرداخت", callback_data=f'approve_{user.id}'),
-        InlineKeyboardButton("❌ رد پرداخت", callback_data=f'reject_{user.id}')
+        InlineKeyboardButton("✅ تایید پرداخت", callback_data=f'approve_{user_id}'),
+        InlineKeyboardButton("❌ رد پرداخت", callback_data=f'reject_{user_id}')
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -201,7 +201,7 @@ async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
     await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, reply_markup=reply_markup)
     del context.user_data['selected_product']
 
-# --- تابع ادمین با اصلاحیه نهایی ---
+# --- تابع ادمین با اصلاحیه نهایی برای تمیز کردن ورودی ---
 async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -209,19 +209,25 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
     action, user_id_str = query.data.split('_')
     user_id = int(user_id_str)
     
+    logger.info(f"ادمین عملیات '{action}' را برای کاربر {user_id} آغاز کرد.")
+    
     cursor.execute("SELECT product, username FROM payments WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
+    
     if not result:
         await query.edit_message_caption(caption="خطا: کاربر یافت نشد (احتمالا قبلا پردازش شده).")
         return
         
-    product, username = result
+    # --- این خط کلید حل مشکل است! ---
+    product, username = result[0].strip(), result[1] # .strip() فاصله‌های اضافی را حذف می‌کند
+    
+    logger.info(f"کاربر @{username} با محصول تمیز شده '{product}' پیدا شد.")
 
     if action == "approve":
         try:
-            # --- منطق اصلاح شده برای پکیج کامل ---
             if product == "bundle":
-                bundle_grades = ["10", "11", "12"] # لیست پایه‌هایی که باید لینکشان ارسال شود
+                logger.info(f"پردازش 'bundle' برای @{username} آغاز شد.")
+                bundle_grades = ["10", "11", "12"]
                 invite_links = []
                 for grade in bundle_grades:
                     channel_id = CHANNEL_IDS.get(grade)
@@ -230,14 +236,13 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
                         link = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1, expire_date=expire_date)
                         invite_links.append(f"🔗 لینک ورود به دوره پایه {grade}م: {link.invite_link}")
                 
-                if len(invite_links) == len(bundle_grades): # اگر همه لینک‌ها با موفقیت ساخته شد
-                    links_text = "\n\n".join(invite_links) # اضافه کردن فاصله بیشتر بین لینک‌ها
+                if len(invite_links) == len(bundle_grades):
+                    links_text = "\n\n".join(invite_links)
                     welcome_message = f"✅ ثبت‌نام شما در پکیج جامع با موفقیت انجام شد!\n\nبا افتخار لینک‌های دسترسی به هر سه دوره را تقدیم می‌کنیم:\n\n{links_text}\n\n⚠️ توجه: هر لینک یکبار مصرف بوده و پس از ۱ روز منقضی می‌شود."
                     await context.bot.send_message(chat_id=user_id, text=welcome_message)
-                    await query.edit_message_caption(caption=f"✅ کاربر @{username} (پکیج جامع) تایید شد و ۳ لینک برای او ارسال گردید.")
+                    await query.edit_message_caption(caption=f"✅ کاربر @{username} (پکیج جامع) تایید شد و ۳ لینک ارسال گردید.")
                 else:
                     await query.edit_message_caption(caption="❌ خطا: مشکلی در ساخت تمام لینک‌ها برای پکیج جامع رخ داد.")
-            # --- منطق دوره‌های تکی (بدون تغییر) ---
             else:
                 channel_id = CHANNEL_IDS.get(product)
                 if not channel_id:
@@ -250,15 +255,14 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
                 await context.bot.send_message(chat_id=user_id, text=welcome_message)
                 await query.edit_message_caption(caption=f"✅ کاربر @{username} (محصول: {product}) تایید شد.")
 
-            # آپدیت دیتابیس در هر دو حالت موفقیت‌آمیز
             cursor.execute("UPDATE payments SET status = ? WHERE user_id = ?", ("تایید شده", user_id))
             conn.commit()
 
         except Forbidden:
             await query.edit_message_caption(caption=f"❌ خطا: کاربر @{username} ربات را بلاک کرده است.")
         except Exception as e:
-            logger.error(f"خطا در تایید کاربر {user_id}: {e}")
-            await query.edit_message_caption(caption="❌ خطا در ساخت لینک. آیا ربات در تمام کانال‌ها ادمین است؟")
+            logger.error(f"خطای پیش‌بینی نشده در تایید کاربر {user_id}: {e}", exc_info=True)
+            await query.edit_message_caption(caption="❌ خطای پیش‌بینی نشده. لاگ‌ها را بررسی کنید.")
             
     elif action == "reject":
         cursor.execute("UPDATE payments SET status = ? WHERE user_id = ?", ("رد شده", user_id))
@@ -267,7 +271,6 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_caption(caption=f"❌ کاربر @{username} رد شد.")
 
 # --- فاز ۶: تابع اصلی برای اجرای همه چیز ---
-# (این بخش بدون تغییر باقی می‌ماند)
 def main():
     if not TOKEN or not ADMIN_ID:
         logger.error("خطا: توکن ربات یا ادمین آیدی تعریف نشده! آنها را در متغیرهای محیطی سرور وارد کنید.")
@@ -292,3 +295,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
