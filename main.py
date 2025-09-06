@@ -32,7 +32,7 @@ CHANNEL_IDS = {
     "11": -1002800050525,
     "12": -1002781513755,
 }
-DB_NAME = "membership_data.db"
+DB_NAME = "medical_data.db"
 
 # --- قیمت‌ها (به تومان) ---
 PRICE_GRADE_SINGLE_FULL = "500,000"
