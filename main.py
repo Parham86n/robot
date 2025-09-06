@@ -1,4 +1,4 @@
-# main.py - نسخه نهایی با متن‌های شما و اصلاحیه فنی برای پکیج سه پایه
+# main.py - نسخه نهایی و کامل با لاگ‌گیری دقیق برای عیب‌یابی
 
 # --- فاز ۱: وارد کردن تمام کتابخانه‌های لازم ---
 import logging
@@ -50,7 +50,7 @@ BTN_GRADE_12 = "پایه دوازدهم"
 BTN_BUNDLE = "🎁 پکیج کامل (هر سه پایه)"
 BTN_BACK = "🔙 بازگشت"
 
-# --- متن‌های حرفه‌ای و باکلاس (متن‌های شما) ---
+# --- متن‌های حرفه‌ای و باکلاس ---
 MSG_WELCOME = "✨ به مدیکال مود خوش آمدید!\n\nدر اینجا، یادگیری برات آسون تر میشه. آماده‌اید تا شروع کنیم؟\n\nلطفا برای شروع، یکی از گزینه‌ها را انتخاب کنید."
 
 MSG_SELECT_COURSE = f"""
@@ -192,7 +192,7 @@ async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text("✅ رسید شما دریافت شد. تیم ما در اسرع وقت آن را بررسی خواهد کرد. از صبوری شما سپاسگزاریم.")
     
     keyboard = [[
-        InlineKeyboardButton("✅ تایید پرداخت", callback_data=f'approve_{user_id}'),
+        InlineKeyboardButton("✅ تایید پرداخت", callback_data=f'approve_{user.id}'),
         InlineKeyboardButton("❌ رد پرداخت", callback_data=f'reject_{user_id}')
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -201,7 +201,7 @@ async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
     await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, reply_markup=reply_markup)
     del context.user_data['selected_product']
 
-# --- تابع ادمین با اصلاحیه نهایی برای تمیز کردن ورودی ---
+# --- تابع ادمین بازنویسی شده با لاگ‌گیری بسیار دقیق برای عیب‌یابی ---
 async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -218,15 +218,25 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_caption(caption="خطا: کاربر یافت نشد (احتمالا قبلا پردازش شده).")
         return
         
-    # --- این خط کلید حل مشکل است! ---
-    product, username = result[0].strip(), result[1] # .strip() فاصله‌های اضافی را حذف می‌کند
+    product_from_db = result[0]
+    username = result[1]
     
-    logger.info(f"کاربر @{username} با محصول تمیز شده '{product}' پیدا شد.")
+    # --- بخش عیب‌یابی ---
+    logger.info(f"مقدار 'product' خام از دیتابیس: '{product_from_db}'")
+    logger.info(f"نوع داده 'product' خام: {type(product_from_db)}")
+    
+    product_cleaned = product_from_db.strip()
+    logger.info(f"مقدار 'product' پس از strip: '{product_cleaned}'")
+    
+    # مقایسه و لاگ کردن نتیجه
+    is_bundle = (product_cleaned == "bundle")
+    logger.info(f"آیا محصول برابر 'bundle' است؟ نتیجه: {is_bundle}")
+    # --- پایان بخش عیب‌یابی ---
 
     if action == "approve":
         try:
-            if product == "bundle":
-                logger.info(f"پردازش 'bundle' برای @{username} آغاز شد.")
+            if is_bundle: # استفاده از نتیجه مقایسه
+                logger.info(f"شرط 'bundle' صحیح است. در حال پردازش برای @{username}.")
                 bundle_grades = ["10", "11", "12"]
                 invite_links = []
                 for grade in bundle_grades:
@@ -244,16 +254,17 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
                 else:
                     await query.edit_message_caption(caption="❌ خطا: مشکلی در ساخت تمام لینک‌ها برای پکیج جامع رخ داد.")
             else:
-                channel_id = CHANNEL_IDS.get(product)
+                logger.info(f"شرط 'bundle' غلط است. در حال پردازش محصول تکی: '{product_cleaned}'")
+                channel_id = CHANNEL_IDS.get(product_cleaned) # استفاده از نسخه تمیز شده
                 if not channel_id:
-                    await query.edit_message_caption(caption=f"❌ خطا: شناسه کانال برای محصول «{product}» تعریف نشده.")
+                    await query.edit_message_caption(caption=f"❌ خطا: شناسه کانال برای محصول «{product_cleaned}» تعریف نشده.")
                     return
 
                 expire_date = datetime.now() + timedelta(days=1)
                 invite_link = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1, expire_date=expire_date)
                 welcome_message = f"✅ ثبت‌نام شما با موفقیت تایید شد!\n\nلینک ورود به دوره:\n{invite_link.invite_link}\n\n⚠️ این لینک یکبار مصرف است."
                 await context.bot.send_message(chat_id=user_id, text=welcome_message)
-                await query.edit_message_caption(caption=f"✅ کاربر @{username} (محصول: {product}) تایید شد.")
+                await query.edit_message_caption(caption=f"✅ کاربر @{username} (محصول: {product_cleaned}) تایید شد.")
 
             cursor.execute("UPDATE payments SET status = ? WHERE user_id = ?", ("تایید شده", user_id))
             conn.commit()
@@ -295,4 +306,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
