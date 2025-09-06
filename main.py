@@ -1,4 +1,4 @@
-# main.py - نسخه نهایی و تمیز شده
+# main.py - نسخه نهایی فروش با متن‌های حرفه‌ای و قیمت‌های جدید
 
 # --- فاز ۱: وارد کردن تمام کتابخانه‌های لازم ---
 import logging
@@ -18,32 +18,83 @@ from telegram.error import Forbidden
 
 # --- فاز ۲: خواندن اطلاعات حساس از متغیرهای محیطی ---
 TOKEN = os.getenv('TOKEN')
-# ما ادمین آیدی را به عدد صحیح تبدیل می‌کنیم و برای جلوگیری از خطا در صورت عدم وجود، یک مقدار پیش‌فرض می‌گذاریم
 try:
     ADMIN_ID = int(os.getenv('ADMIN_ID'))
 except (TypeError, ValueError):
-    ADMIN_ID = None # اگر تعریف نشده بود، None باشد
+    ADMIN_ID = None
 
-# --- فاز ۳: تنظیمات و متن‌های ثابت ---
+# --- فاز ۳: تنظیمات، قیمت‌ها و متن‌های ثابت ---
 SUPPORT_USERNAME = "@Jaber_far"
+CARD_NUMBER = "6219-8619-3064-7200"
+CARD_HOLDER_NAME = "جابر حسنی فر"
 CHANNEL_IDS = {
     "10": -1002400466668,
     "11": -1002800050525,
     "12": -1002781513755,
 }
 DB_NAME = "membership_data.db"
-BTN_COURSES = "🛍️ خرید دوره انیمیشن"
+
+# --- قیمت‌ها (به تومان) ---
+PRICE_GRADE_SINGLE_FULL = "500,000"
+PRICE_GRADE_SINGLE_DISCOUNT = "399,000"
+PRICE_BUNDLE_FULL = "1,500,000"
+PRICE_BUNDLE_DISCOUNT = "599,000"
+
+# --- متن دکمه‌ها ---
+BTN_COURSES = "🛍️ مشاهده و خرید دوره‌ها"
 BTN_AI_IMAGES = "🎨 تصاویر هوش مصنوعی"
-BTN_SUPPORT = "📞 پشتیبانی"
+BTN_SUPPORT = "📞 پشتیبانی و مشاوره"
 BTN_GRADE_10 = "پایه دهم"
 BTN_GRADE_11 = "پایه یازدهم"
 BTN_GRADE_12 = "پایه دوازدهم"
-BTN_BUNDLE = "🎁 هر سه پایه (با تخفیف)"
-BTN_BACK = "🔙 بازگشت به منوی اصلی"
-MSG_WELCOME = "سلام! به ربات ما خوش آمدید. لطفا یکی از گزینه‌های زیر را انتخاب کنید:"
-MSG_SELECT_COURSE = "عالی! لطفا دوره مورد نظر خود را انتخاب کنید:"
-MSG_SUPPORT = f"در صورت نیاز به پشتیبانی، می‌توانید با آیدی {SUPPORT_USERNAME} در ارتباط باشید."
-MSG_AI_IMAGES = "این بخش به زودی فعال خواهد شد. منتظر خبرهای هیجان‌انگیز ما باشید!"
+BTN_BUNDLE = "🎁 پکیج کامل (هر سه پایه)"
+BTN_BACK = "🔙 بازگشت"
+
+# --- متن‌های حرفه‌ای و باکلاس ---
+MSG_WELCOME = "✨ به آکادمی انیمیشن ما خوش آمدید!\n\nدر اینجا، مرزهای خلاقیت جابجا می‌شود. آماده‌اید تا داستان خود را به حرکت درآورید؟\n\nلطفا برای شروع، یکی از گزینه‌ها را انتخاب کنید."
+
+MSG_SELECT_COURSE = f"""
+یک قدم تا خلق شگفتی فاصله دارید! 🚀
+
+دوره‌های تخصصی ما با **تخفیف استثنایی** برای مدت محدود ارائه می‌شوند:
+
+- **دوره تخصصی پایه دهم**
+  ~قیمت اصلی: {PRICE_GRADE_SINGLE_FULL} تومان~
+  ✅ **با تخفیف: {PRICE_GRADE_SINGLE_DISCOUNT} تومان**
+
+- **دوره تخصصی پایه یازدهم**
+  ~قیمت اصلی: {PRICE_GRADE_SINGLE_FULL} تومان~
+  ✅ **با تخفیف: {PRICE_GRADE_SINGLE_DISCOUNT} تومان**
+
+- **دوره تخصصی پایه دوازدهم**
+  ~قیمت اصلی: {PRICE_GRADE_SINGLE_FULL} تومان~
+  ✅ **با تخفیف: {PRICE_GRADE_SINGLE_DISCOUNT} تومان**
+
+- **🎁 پکیج جامع (هر سه پایه با هم)**
+  ~قیمت اصلی: {PRICE_BUNDLE_FULL} تومان~
+  💎 **فرصت طلایی: {PRICE_BUNDLE_DISCOUNT} تومان**
+
+لطفا دوره مورد نظر خود را برای ادامه فرآیند ثبت‌نام انتخاب کنید.
+"""
+
+MSG_PAYMENT_INSTRUCTION = """
+سپاس از انتخاب شما! ✨
+
+برای نهایی کردن ثبت‌نام، لطفا مبلغ مشخص شده را به شماره کارت زیر واریز نموده و سپس **تصویر واضح رسید پرداخت** را در همین صفحه ارسال فرمایید.
+
+💳 **شماره کارت:**
+`{card_number}`
+(بانک سامان - به نام {card_holder_name})
+
+**مبلغ قابل پرداخت: {price} تومان**
+
+پس از ارسال رسید، درخواست شما توسط تیم پشتیبانی بررسی و لینک‌های دوره بلافاصله برای شما ارسال خواهد شد.
+"""
+
+MSG_SUPPORT = f"در هر مرحله از مسیر، همراه شما هستیم. برای ارتباط مستقیم با تیم پشتیبانی و مشاوره، به آیدی زیر پیام دهید:\n\n👤 {SUPPORT_USERNAME}"
+MSG_AI_IMAGES = "این بخش در حال آماده‌سازی است. به زودی از ابزارهای هوش مصنوعی خلاقانه ما شگفت‌زده خواهید شد!"
+
+# (بقیه کد بدون تغییر باقی می‌ماند)
 
 # --- فاز ۴: تنظیمات لاگ‌گیری و دیتابیس ---
 logging.basicConfig(
@@ -86,7 +137,7 @@ async def show_courses_menu_handler(update: Update, context: ContextTypes.DEFAUL
         [KeyboardButton(BTN_BACK)],
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text(MSG_SELECT_COURSE, reply_markup=reply_markup)
+    await update.message.reply_text(MSG_SELECT_COURSE, reply_markup=reply_markup, parse_mode='HTML')
 
 async def handle_support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(MSG_SUPPORT)
@@ -100,12 +151,26 @@ async def handle_grade_selection_handler(update: Update, context: ContextTypes.D
         BTN_GRADE_10: "10", BTN_GRADE_11: "11",
         BTN_GRADE_12: "12", BTN_BUNDLE: "bundle"
     }
+    price_map = {
+        BTN_GRADE_10: PRICE_GRADE_SINGLE_DISCOUNT,
+        BTN_GRADE_11: PRICE_GRADE_SINGLE_DISCOUNT,
+        BTN_GRADE_12: PRICE_GRADE_SINGLE_DISCOUNT,
+        BTN_BUNDLE: PRICE_BUNDLE_DISCOUNT
+    }
+    
     product_choice = product_map.get(user_text)
+    selected_price = price_map.get(user_text)
+
     context.user_data['selected_product'] = product_choice
-    await update.message.reply_text(
-        f"شما «{user_text}» را انتخاب کردید.\n\n"
-        "لطفا تصویر رسید پرداخت خود را ارسال کنید."
+    
+    # ساخت پیام راهنمای پرداخت
+    payment_message = MSG_PAYMENT_INSTRUCTION.format(
+        card_number=CARD_NUMBER,
+        card_holder_name=CARD_HOLDER_NAME,
+        price=selected_price
     )
+    
+    await update.message.reply_text(payment_message, parse_mode='HTML')
 
 async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
@@ -127,11 +192,11 @@ async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text("خطایی در ثبت اطلاعات رخ داد. لطفا دوباره تلاش کنید.")
         return
 
-    await update.message.reply_text("✅ رسید شما دریافت و برای مدیر ارسال شد. لطفا تا زمان تایید صبور باشید.")
+    await update.message.reply_text("✅ رسید شما دریافت شد. تیم ما در اسرع وقت آن را بررسی خواهد کرد. از صبوری شما سپاسگزاریم.")
     
     keyboard = [[
-        InlineKeyboardButton("✅ تایید", callback_data=f'approve_{user.id}'),
-        InlineKeyboardButton("❌ رد", callback_data=f'reject_{user.id}')
+        InlineKeyboardButton("✅ تایید پرداخت", callback_data=f'approve_{user.id}'),
+        InlineKeyboardButton("❌ رد پرداخت", callback_data=f'reject_{user.id}')
     ]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -149,7 +214,7 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
     cursor.execute("SELECT product, username FROM payments WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
     if not result:
-        await query.edit_message_caption(caption="خطا: کاربر یافت نشد.")
+        await query.edit_message_caption(caption="خطا: کاربر یافت نشد (احتمالا قبلا پردازش شده).")
         return
         
     product, username = result
@@ -164,15 +229,15 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
                     if channel_id:
                         expire_date = datetime.now() + timedelta(days=1)
                         link = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1, expire_date=expire_date)
-                        invite_links.append(f"لینک پایه {grade}م: {link.invite_link}")
+                        invite_links.append(f"🔗 لینک ورود به دوره پایه {grade}م: {link.invite_link}")
                 
                 if len(invite_links) == 3:
                     links_text = "\n".join(invite_links)
-                    welcome_message = f"✅ پرداخت شما برای بسته کامل تایید شد!\n\nلینک‌های عضویت شما:\n\n{links_text}\n\n⚠️ هر لینک یکبار مصرف است."
+                    welcome_message = f"✅ ثبت‌نام شما در پکیج جامع با موفقیت انجام شد!\n\nبا افتخار لینک‌های دسترسی به هر سه دوره را تقدیم می‌کنیم:\n\n{links_text}\n\n⚠️ توجه: هر لینک یکبار مصرف بوده و پس از ۱ روز منقضی می‌شود."
                     await context.bot.send_message(chat_id=user_id, text=welcome_message)
-                    await query.edit_message_caption(caption=f"✅ کاربر @{username} (بسته کامل) تایید شد و ۳ لینک ارسال گردید.")
+                    await query.edit_message_caption(caption=f"✅ کاربر @{username} (پکیج جامع) تایید شد و ۳ لینک برای او ارسال گردید.")
                 else:
-                    await query.edit_message_caption(caption="❌ خطا: مشکلی در ساخت لینک برای بسته کامل رخ داد.")
+                    await query.edit_message_caption(caption="❌ خطا: مشکلی در ساخت لینک برای پکیج جامع رخ داد.")
             else:
                 channel_id = CHANNEL_IDS.get(product)
                 if not channel_id:
@@ -181,7 +246,7 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
 
                 expire_date = datetime.now() + timedelta(days=1)
                 invite_link = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1, expire_date=expire_date)
-                welcome_message = f"✅ پرداخت شما تایید شد!\n\nلینک عضویت شما:\n{invite_link.invite_link}\n\n⚠️ این لینک یکبار مصرف است."
+                welcome_message = f"✅ ثبت‌نام شما با موفقیت تایید شد!\n\nلینک ورود به دوره:\n{invite_link.invite_link}\n\n⚠️ این لینک یکبار مصرف است."
                 await context.bot.send_message(chat_id=user_id, text=welcome_message)
                 await query.edit_message_caption(caption=f"✅ کاربر @{username} (محصول: {product}) تایید شد.")
 
@@ -197,7 +262,7 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
     elif action == "reject":
         cursor.execute("UPDATE payments SET status = ? WHERE user_id = ?", ("رد شده", user_id))
         conn.commit()
-        await context.bot.send_message(chat_id=user_id, text="❌ متاسفانه پرداخت شما تایید نشد.")
+        await context.bot.send_message(chat_id=user_id, text="❌ پرداخت شما تایید نشد. لطفا در صورت لزوم با پشتیبانی تماس بگیرید.")
         await query.edit_message_caption(caption=f"❌ کاربر @{username} رد شد.")
 
 # --- فاز ۶: تابع اصلی برای اجرای همه چیز ---
