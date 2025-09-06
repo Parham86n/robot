@@ -1,4 +1,4 @@
-# main.py - نسخه نهایی فروش با متن‌های حرفه‌ای و قیمت‌های جدید
+# main.py - نسخه نهایی با اصلاحیه برای پکیج سه پایه
 
 # --- فاز ۱: وارد کردن تمام کتابخانه‌های لازم ---
 import logging
@@ -51,7 +51,7 @@ BTN_BUNDLE = "🎁 پکیج کامل (هر سه پایه)"
 BTN_BACK = "🔙 بازگشت"
 
 # --- متن‌های حرفه‌ای و باکلاس ---
-MSG_WELCOME = "✨ به آکادمی انیمیشن ما خوش آمدید!\n\nدر اینجا، مرزهای خلاقیت جابجا می‌شود. آماده‌اید تا داستان خود را به حرکت درآورید؟\n\nلطفا برای شروع، یکی از گزینه‌ها را انتخاب کنید."
+MSG_WELCOME = "✨ به مدیکال مود خوش آمدید!\n\nدر اینجا، یادگیری برات آسون تر میشه. آماده‌اید تا شروع کنیم؟\n\nلطفا برای شروع، یکی از گزینه‌ها را انتخاب کنید."
 
 MSG_SELECT_COURSE = f"""
 یک قدم تا خلق شگفتی فاصله دارید! 🚀
@@ -91,10 +91,8 @@ MSG_PAYMENT_INSTRUCTION = """
 پس از ارسال رسید، درخواست شما توسط تیم پشتیبانی بررسی و لینک‌های دوره بلافاصله برای شما ارسال خواهد شد.
 """
 
-MSG_SUPPORT = f"در هر مرحله از مسیر، همراه شما هستیم. برای ارتباط مستقیم با تیم پشتیبانی و مشاوره، به آیدی زیر پیام دهید:\n\n👤 {SUPPORT_USERNAME}"
+MSG_SUPPORT = f"در هر مرحله از مسیر، همراه شما هستیم. برای ارتباط مستقیم با تیم پشتیبانی و مشاوره, به آیدی زیر پیام دهید:\n\n👤 {SUPPORT_USERNAME}"
 MSG_AI_IMAGES = "این بخش در حال آماده‌سازی است. به زودی از ابزارهای هوش مصنوعی خلاقانه ما شگفت‌زده خواهید شد!"
-
-# (بقیه کد بدون تغییر باقی می‌ماند)
 
 # --- فاز ۴: تنظیمات لاگ‌گیری و دیتابیس ---
 logging.basicConfig(
@@ -163,7 +161,6 @@ async def handle_grade_selection_handler(update: Update, context: ContextTypes.D
 
     context.user_data['selected_product'] = product_choice
     
-    # ساخت پیام راهنمای پرداخت
     payment_message = MSG_PAYMENT_INSTRUCTION.format(
         card_number=CARD_NUMBER,
         card_holder_name=CARD_HOLDER_NAME,
@@ -204,6 +201,7 @@ async def handle_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
     await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, reply_markup=reply_markup)
     del context.user_data['selected_product']
 
+# --- تابع ادمین با اصلاحیه نهایی ---
 async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -221,23 +219,25 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
 
     if action == "approve":
         try:
+            # --- منطق اصلاح شده برای پکیج کامل ---
             if product == "bundle":
-                bundle_products = ["10", "11", "12"]
+                bundle_grades = ["10", "11", "12"] # لیست پایه‌هایی که باید لینکشان ارسال شود
                 invite_links = []
-                for grade in bundle_products:
+                for grade in bundle_grades:
                     channel_id = CHANNEL_IDS.get(grade)
                     if channel_id:
                         expire_date = datetime.now() + timedelta(days=1)
                         link = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1, expire_date=expire_date)
                         invite_links.append(f"🔗 لینک ورود به دوره پایه {grade}م: {link.invite_link}")
                 
-                if len(invite_links) == 3:
-                    links_text = "\n".join(invite_links)
+                if len(invite_links) == len(bundle_grades): # اگر همه لینک‌ها با موفقیت ساخته شد
+                    links_text = "\n\n".join(invite_links) # اضافه کردن فاصله بیشتر بین لینک‌ها
                     welcome_message = f"✅ ثبت‌نام شما در پکیج جامع با موفقیت انجام شد!\n\nبا افتخار لینک‌های دسترسی به هر سه دوره را تقدیم می‌کنیم:\n\n{links_text}\n\n⚠️ توجه: هر لینک یکبار مصرف بوده و پس از ۱ روز منقضی می‌شود."
                     await context.bot.send_message(chat_id=user_id, text=welcome_message)
                     await query.edit_message_caption(caption=f"✅ کاربر @{username} (پکیج جامع) تایید شد و ۳ لینک برای او ارسال گردید.")
                 else:
-                    await query.edit_message_caption(caption="❌ خطا: مشکلی در ساخت لینک برای پکیج جامع رخ داد.")
+                    await query.edit_message_caption(caption="❌ خطا: مشکلی در ساخت تمام لینک‌ها برای پکیج جامع رخ داد.")
+            # --- منطق دوره‌های تکی (بدون تغییر) ---
             else:
                 channel_id = CHANNEL_IDS.get(product)
                 if not channel_id:
@@ -250,6 +250,7 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
                 await context.bot.send_message(chat_id=user_id, text=welcome_message)
                 await query.edit_message_caption(caption=f"✅ کاربر @{username} (محصول: {product}) تایید شد.")
 
+            # آپدیت دیتابیس در هر دو حالت موفقیت‌آمیز
             cursor.execute("UPDATE payments SET status = ? WHERE user_id = ?", ("تایید شده", user_id))
             conn.commit()
 
@@ -266,6 +267,7 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_caption(caption=f"❌ کاربر @{username} رد شد.")
 
 # --- فاز ۶: تابع اصلی برای اجرای همه چیز ---
+# (این بخش بدون تغییر باقی می‌ماند)
 def main():
     if not TOKEN or not ADMIN_ID:
         logger.error("خطا: توکن ربات یا ادمین آیدی تعریف نشده! آنها را در متغیرهای محیطی سرور وارد کنید.")
